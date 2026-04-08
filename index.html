@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expenses - Claudia María</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --pink-deep: #a0005a; --pink-hot: #ff007f; --pink-mid: #e60073;
+    --pink-light: #ff4fa3; --pink-rose: #c2185b; --pink-pale: #ff85c1;
+    --gold-bright: #ffd84d; --gold-deep: #ffc300; --cream: #fffef2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--cream); color: #2a0018; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, var(--pink-deep) 0%, var(--pink-hot) 60%, var(--gold-bright) 100%);
+    padding: 16px 20px; color: white;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(160,0,90,0.3); flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.82rem; opacity: 0.85; margin-top: 2px; }
+  .nav-tabs { display: flex; background: white; border-bottom: 2px solid #f0e0ea; overflow-x: auto; flex-shrink: 0; }
+  .nav-tab {
+    padding: 10px 20px; border: none; cursor: pointer; font-size: 0.85rem;
+    font-weight: 700; background: none; color: #888; border-bottom: 3px solid transparent;
+    transition: all 0.2s; white-space: nowrap; margin-bottom: -2px;
+  }
+  .nav-tab.active { color: var(--pink-deep); border-bottom-color: var(--pink-hot); }
+  .nav-tab:hover { color: var(--pink-deep); }
+  .year-tabs-wrap { background: white; border-bottom: 1px solid #f0e0ea; padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; align-items: center; }
+  .year-tab {
+    padding: 7px 14px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 700;
+    background: none; color: #aaa; border-bottom: 3px solid transparent; transition: all 0.2s;
+    white-space: nowrap; margin-bottom: -1px;
+  }
+  .year-tab.active { color: var(--pink-deep); border-bottom-color: var(--gold-deep); }
+  .year-tab:hover { color: var(--pink-deep); }
+  .year-tab-group { display: inline-flex; align-items: center; }
+  .year-edit-btn {
+    background: none; border: none; cursor: pointer; color: var(--pink-deep);
+    padding: 2px 3px; opacity: 0; transition: opacity 0.2s;
+    display: inline-flex; align-items: center;
+  }
+  .year-tab-group:hover .year-edit-btn { opacity: 1; }
+  .year-add-btn {
+    padding: 5px 12px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 800;
+    background: var(--gold-bright); color: #2a0018; border-radius: 8px; margin-left: 4px;
+    transition: background 0.2s;
+  }
+  .year-add-btn:hover { background: var(--gold-deep); }
+  .month-tabs { display: flex; gap: 6px; padding: 12px 16px 0; background: white; border-bottom: 2px solid #f0e0ea; flex-wrap: wrap; }
+  .month-tab {
+    padding: 7px 14px; border-radius: 20px 20px 0 0; border: none;
+    cursor: pointer; font-size: 0.78rem; font-weight: 600;
+    background: #f5e6ef; color: var(--pink-deep); transition: all 0.2s; white-space: nowrap;
+  }
+  .month-tab:hover { background: var(--pink-pale); color: white; }
+  .month-tab.active { background: linear-gradient(135deg, var(--pink-deep), var(--pink-hot)); color: white; box-shadow: 0 -3px 10px rgba(160,0,90,0.25); }
+  .month-tab.add-month { background: var(--gold-bright); color: #2a0018; font-size: 1rem; padding: 5px 12px; }
+  .month-tab.add-month:hover { background: var(--gold-deep); }
+  .month-tab-wrap { display: inline-flex; align-items: center; }
+  .month-tab-wrap .month-tab { border-radius: 20px 0 0 0; }
+  .delete-month-btn {
+    background: linear-gradient(135deg, var(--pink-deep), var(--pink-hot));
+    border: none; border-radius: 0 20px 0 0; color: white;
+    cursor: pointer; font-size: 0.65rem; padding: 7px 6px 7px 3px;
+    opacity: 0; transition: opacity 0.2s; line-height: 1;
+  }
+  .month-tab-wrap:hover .delete-month-btn { opacity: 1; }
+  .month-edit-btn {
+    background: linear-gradient(135deg, var(--pink-deep), var(--pink-hot));
+    border: none; color: white; cursor: pointer; padding: 7px 5px;
+    opacity: 0; transition: opacity 0.2s; display: inline-flex; align-items: center;
+  }
+  .month-tab-wrap:hover .month-edit-btn { opacity: 1; }
+  .month-tab-wrap .month-tab.active ~ .month-edit-btn,
+  .month-tab-wrap .month-tab.active ~ .delete-month-btn { background: linear-gradient(135deg, #7a0044, var(--pink-deep)); }
+  .main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 2px 12px rgba(160,0,90,0.08); border-left: 4px solid var(--pink-hot); }
+  .card.income { border-left-color: var(--gold-deep); }
+  .card.balance { border-left-color: var(--pink-deep); }
+  .card.fixed { border-left-color: var(--pink-pale); }
+  .card label { font-size: 0.7rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card .amount { font-size: 1.5rem; font-weight: 800; margin-top: 4px; color: var(--pink-deep); }
+  .card.income .amount { color: #c48800; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+  .panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 2px 12px rgba(160,0,90,0.08); }
+  .panel h3 { font-size: 0.95rem; font-weight: 700; color: var(--pink-deep); margin-bottom: 14px; }
+  .transactions-panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 2px 12px rgba(160,0,90,0.08); margin-bottom: 16px; }
+  .transactions-panel h3 { font-size: 0.95rem; font-weight: 700; color: var(--pink-deep); margin-bottom: 10px; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .toolbar input, .toolbar select { padding: 7px 10px; border: 1.5px solid #f0d0e0; border-radius: 8px; font-size: 0.8rem; outline: none; background: #fff9fc; color: #2a0018; }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--pink-hot); }
+  .toolbar input[type="text"] { flex: 1; min-width: 120px; }
+  .filter-sum { font-size: 0.78rem; font-weight: 700; color: var(--pink-deep); background: #fff0f7; padding: 5px 10px; border-radius: 8px; white-space: nowrap; align-self: center; }
+  .btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: linear-gradient(135deg, var(--pink-deep), var(--pink-hot)); color: white; }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 480px; }
+  thead th { background: linear-gradient(135deg, var(--pink-deep), var(--pink-rose)); color: white; padding: 9px 10px; text-align: left; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  tbody tr { border-bottom: 1px solid #f5e6ef; transition: background 0.15s; }
+  tbody tr:hover { background: #fff0f7; }
+  tbody td { padding: 8px 10px; vertical-align: middle; }
+  .total-row td { font-weight: 800; background: #fff5fa; color: var(--pink-deep); font-size: 0.82rem; border-top: 2px solid var(--pink-pale); }
+  .total-row td.ingreso { color: #c48800; }
+  .cat-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: #f5e6ef; color: var(--pink-deep); }
+  .egreso { color: var(--pink-deep); font-weight: 700; }
+  .egreso.negative { color: #008855; }
+  .ingreso { color: #c48800; font-weight: 700; }
+  .add-row { display: grid; gap: 6px; margin-top: 10px; align-items: center; background: #fff5fa; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--pink-pale); }
+  .add-row input, .add-row select { padding: 6px 8px; border: 1.5px solid #f0d0e0; border-radius: 6px; font-size: 0.78rem; outline: none; background: white; width: 100%; }
+  .add-row input:focus, .add-row select:focus { border-color: var(--pink-hot); }
+  .add-row .btn { padding: 7px 10px; font-size: 1rem; }
+  .fixed-add-row { grid-template-columns: 1fr 90px 90px 36px; }
+  .tx-add-row { grid-template-columns: 110px 1fr 80px 80px 110px 110px 36px; }
+  @media (max-width: 700px) {
+    .fixed-add-row { grid-template-columns: 1fr 1fr; }
+    .tx-add-row { grid-template-columns: 1fr 1fr; }
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+  }
+  .chart-wrap { position: relative; height: 200px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(50,0,30,0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 18px; padding: 24px; width: 400px; max-width: 100%; box-shadow: 0 20px 60px rgba(160,0,90,0.25); }
+  .modal h3 { color: var(--pink-deep); font-size: 1rem; margin-bottom: 16px; }
+  .modal label { font-size: 0.78rem; color: #666; font-weight: 600; display: block; margin-bottom: 3px; margin-top: 10px; }
+  .modal input, .modal select { width: 100%; padding: 8px 10px; border: 1.5px solid #f0d0e0; border-radius: 8px; font-size: 0.88rem; outline: none; }
+  .modal input:focus, .modal select:focus { border-color: var(--pink-hot); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .empty-state { text-align: center; padding: 30px; color: #bbb; font-size: 0.88rem; }
+  .delete-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 0.9rem; padding: 2px 5px; border-radius: 4px; transition: all 0.15s; }
+  .delete-btn:hover { color: var(--pink-deep); background: #ffe0ee; }
+  .edit-btn { background: none; border: none; cursor: pointer; color: var(--pink-deep); padding: 2px 5px; border-radius: 4px; transition: all 0.15s; display: inline-flex; align-items: center; }
+  .edit-btn:hover { background: #ffe0ee; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: #fff0f7; color: var(--pink-deep); }
+  .yearly-wrap { padding: 16px; max-width: 1400px; margin: 0 auto; }
+  .yearly-table-wrap { overflow-x: auto; margin-bottom: 20px; }
+  .yearly-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 600px; }
+  .yearly-table th { background: linear-gradient(135deg, var(--pink-deep), var(--pink-rose)); color: white; padding: 9px 12px; text-align: right; font-size: 0.72rem; text-transform: uppercase; }
+  .yearly-table th:first-child { text-align: left; border-radius: 8px 0 0 0; }
+  .yearly-table th:last-child { border-radius: 0 8px 0 0; }
+  .yearly-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #f5e6ef; }
+  .yearly-table td:first-child { text-align: left; font-weight: 700; color: var(--pink-deep); }
+  .yearly-table tr:hover td { background: #fff0f7; }
+  .yearly-table .ytotal td { font-weight: 800; background: #fff5fa; border-top: 2px solid var(--pink-pale); }
+  .yearly-ing { color: #c48800; font-weight: 700; }
+  .yearly-egr { color: var(--pink-hot); font-weight: 700; }
+  .yearly-bal-pos { color: #008855; font-weight: 800; }
+  .yearly-bal-neg { color: var(--pink-deep); font-weight: 800; }
+  .year-section-title { font-size: 1.1rem; font-weight: 800; color: var(--pink-deep); margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--pink-pale); }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Expenses — Claudia María</h1><p>Monthly income and expenses dashboard</p></div>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" id="tabMonthly" onclick="switchView('monthly')">Monthly</button>
+  <button class="nav-tab" id="tabYearly" onclick="switchView('yearly')">Yearly Summary</button>
+</div>
+
+<!-- MONTHLY VIEW -->
+<div id="viewMonthly">
+  <div class="year-tabs-wrap" id="yearTabs"></div>
+  <div class="month-tabs" id="monthTabs"></div>
+  <div class="main">
+    <div class="summary-cards" id="summaryCards"></div>
+    <div class="grid-2">
+      <div class="panel"><h3>Expenses by Category</h3><div class="chart-wrap"><canvas id="catChart"></canvas></div></div>
+      <div class="panel"><h3>Income vs Expenses</h3><div class="chart-wrap"><canvas id="barChart"></canvas></div></div>
+    </div>
+    <div class="transactions-panel">
+      <h3>Fixed Expenses</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Description</th><th>Income</th><th>Expense</th><th></th><th></th></tr></thead>
+          <tbody id="fixedBody"></tbody>
+        </table>
+      </div>
+      <div class="add-row fixed-add-row">
+        <input type="text" id="fixedDesc" placeholder="Description" />
+        <input type="number" id="fixedIng" placeholder="Income" step="0.01" />
+        <input type="number" id="fixedEgr" placeholder="Expense" step="0.01" />
+        <button class="btn btn-primary" onclick="addFixed()">+</button>
+      </div>
+    </div>
+    <div class="transactions-panel">
+      <h3>Variable Transactions</h3>
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Search..." oninput="renderTable()" />
+        <select id="catFilter" onchange="renderTable()"><option value="">All categories</option></select>
+        <select id="tarjetaFilter" onchange="renderTable()"><option value="">All cards</option></select>
+        <span class="filter-sum" id="filterSum"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Income</th><th>Expense</th><th>Category</th><th>Card</th><th></th><th></th></tr></thead>
+          <tbody id="txBody"></tbody>
+        </table>
+      </div>
+      <div class="add-row tx-add-row">
+        <input type="date" id="newFecha" />
+        <input type="text" id="newDesc" placeholder="Description" />
+        <input type="number" id="newIng" placeholder="Income" step="0.01" />
+        <input type="number" id="newEgr" placeholder="Expense" step="0.01" />
+        <input type="text" id="newCat" placeholder="Category" list="catSuggestions" />
+        <input type="text" id="newTarjeta" placeholder="Card" list="tarjetaSuggestions" />
+        <button class="btn btn-primary" onclick="addTransaction()">+</button>
+      </div>
+      <datalist id="catSuggestions"></datalist>
+      <datalist id="tarjetaSuggestions"></datalist>
+    </div>
+  </div>
+</div>
+
+<!-- YEARLY VIEW -->
+<div id="viewYearly" style="display:none">
+  <div class="year-tabs-wrap" id="yearTabsY"></div>
+  <div class="yearly-wrap" id="yearlyContent"></div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="yearModal">
+  <div class="modal">
+    <h3 id="yearModalTitle">Add Year</h3>
+    <label>Year (2 digits, e.g. 27)</label>
+    <input type="text" id="yearInput" placeholder="27" maxlength="4" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('yearModal')" style="background:#f5e6ef;color:var(--pink-deep)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmYear()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="monthModal">
+  <div class="modal">
+    <h3 id="monthModalTitle">Edit Month</h3>
+    <label>Month name (e.g. AGO 26)</label>
+    <input type="text" id="monthInput" placeholder="AGO 26" />
+    <div id="monthCopyWrap">
+      <label>Copy fixed expenses from:</label>
+      <select id="copyFixedFrom"><option value="">Don't copy (start empty)</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('monthModal')" style="background:#f5e6ef;color:var(--pink-deep)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmMonth()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>Edit Transaction</h3>
+    <label>Date</label><input type="date" id="editFecha" />
+    <label>Description</label><input type="text" id="editDesc" />
+    <label>Income</label><input type="number" id="editIng" step="0.01" />
+    <label>Expense</label><input type="number" id="editEgr" step="0.01" />
+    <label>Category</label><input type="text" id="editCat" list="catSuggestions" />
+    <label>Card</label><input type="text" id="editTarjeta" list="tarjetaSuggestions" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('editModal')" style="background:#f5e6ef;color:var(--pink-deep)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editFixedModal">
+  <div class="modal">
+    <h3>Edit Fixed Expense</h3>
+    <label>Description</label><input type="text" id="efDesc" />
+    <label>Income</label><input type="number" id="efIng" step="0.01" />
+    <label>Expense</label><input type="number" id="efEgr" step="0.01" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('editFixedModal')" style="background:#f5e6ef;color:var(--pink-deep)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmEditFixed()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──
+const PENCIL_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const COLORS = ['#a0005a','#ff007f','#e60073','#ff4fa3','#c2185b','#ff85c1','#ffd84d','#ffc300','#b5004e','#ff3394'];
+const SK = 'gastos_claudia_maria_v3';
+const MONTH_ORDER = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+const INITIAL_DATA = {"JUL 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2026-02-27","descripcion":"Sala de Despecho","ingresos":0,"egresos":510,"categoria":"","tarjeta":""}]},"JUN 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2026-02-27","descripcion":"Sala de Despecho","ingresos":0,"egresos":510,"categoria":"","tarjeta":""}]},"MAY 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2026-02-27","descripcion":"Sala de Despecho","ingresos":0,"egresos":510,"categoria":"","tarjeta":""}]},"ABR 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2026-02-27","descripcion":"Sala de Despecho","ingresos":0,"egresos":510,"categoria":"","tarjeta":""}]},"MAR 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2026-02-27","descripcion":"Sala de Despecho","ingresos":0,"egresos":510,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-03-02","descripcion":"Tarifa CC Servicio Digital","ingresos":0,"egresos":5.25,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-03","descripcion":"Payback torta Amparito","ingresos":0,"egresos":-10.06,"categoria":"Comida","tarjeta":"Produbanco"},{"fecha":"2026-03-03","descripcion":"Tarifa CC Gestion Cobranza","ingresos":0,"egresos":6.38,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-03","descripcion":"Diferido colchon","ingresos":0,"egresos":18.38,"categoria":"Fixed Expenses","tarjeta":"Produbanco CC"},{"fecha":"2026-03-03","descripcion":"ND IVA costo Financiero emisor","ingresos":0,"egresos":0.96,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-03","descripcion":"Tarifa CC","ingresos":0,"egresos":0.08,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-03","descripcion":"Lavanderia chaleco","ingresos":0,"egresos":4.5,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-03-05","descripcion":"Parqueadero","ingresos":0,"egresos":4.5,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-03-07","descripcion":"Pedidos Ya Smash","ingresos":0,"egresos":11.98,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-03-07","descripcion":"Diferido seguro auto","ingresos":0,"egresos":69.85,"categoria":"Auto","tarjeta":"Diners"},{"fecha":"2026-03-08","descripcion":"Pedidos Ya Poke","ingresos":0,"egresos":15.67,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-03-08","descripcion":"Ephimero","ingresos":0,"egresos":23,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-03-08","descripcion":"Spotify","ingresos":0,"egresos":10.99,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-03-08","descripcion":"Payback Giu SDD","ingresos":0,"egresos":-30.5,"categoria":"Fiesta","tarjeta":"Produbanco"},{"fecha":"2026-03-08","descripcion":"Payback Meme SDD","ingresos":0,"egresos":-87,"categoria":"Fiesta","tarjeta":"Produbanco"},{"fecha":"2026-03-08","descripcion":"Payback Luz SDD","ingresos":0,"egresos":-75.25,"categoria":"Fiesta","tarjeta":"Produbanco"},{"fecha":"2026-03-09","descripcion":"Gasolina","ingresos":0,"egresos":30.58,"categoria":"Gasolina","tarjeta":"Titanium"},{"fecha":"2026-03-09","descripcion":"Pedidos Ya Rusty","ingresos":0,"egresos":10.04,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-03-10","descripcion":"Supermaxi","ingresos":0,"egresos":6.66,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-12","descripcion":"Payback Romi SDD","ingresos":0,"egresos":-60,"categoria":"Fiesta","tarjeta":"Produbanco"},{"fecha":"2026-03-13","descripcion":"Tarifa CC","ingresos":0,"egresos":0.09,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-13","descripcion":"Payback SDD botellas","ingresos":0,"egresos":-200,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-03-13","descripcion":"Tarifa CC","ingresos":0,"egresos":0.03,"categoria":"Tarifa","tarjeta":"Produbanco CC"},{"fecha":"2026-03-14","descripcion":"Brown Sugar","ingresos":0,"egresos":12.65,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"H&M","ingresos":0,"egresos":26.97,"categoria":"Ropa","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"Starbucks","ingresos":0,"egresos":5.3,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"Noe","ingresos":0,"egresos":13.9,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"Wok to Walk","ingresos":0,"egresos":8.14,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"Kai Lounge","ingresos":0,"egresos":12,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-03-14","descripcion":"Stradivarius","ingresos":0,"egresos":165.17,"categoria":"Ropa","tarjeta":"Titanium"},{"fecha":"2026-03-15","descripcion":"Pizza Hut","ingresos":0,"egresos":19.34,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"Apple","ingresos":0,"egresos":11.49,"categoria":"Fixed Expenses","tarjeta":"Pichincha CC"},{"fecha":"2026-03-16","descripcion":"Lucia","ingresos":0,"egresos":26.94,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"El Español","ingresos":0,"egresos":1.24,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"Parqueadero","ingresos":0,"egresos":3,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"Fybecca","ingresos":0,"egresos":25.16,"categoria":"Salud","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"Sweet and Coffee","ingresos":0,"egresos":3.7,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-16","descripcion":"Payback Amalia SDD","ingresos":0,"egresos":-18.5,"categoria":"Fiesta","tarjeta":"Pichincha"},{"fecha":"2026-03-18","descripcion":"Diferido cama","ingresos":0,"egresos":73.38,"categoria":"Fixed Expenses","tarjeta":"Diners"},{"fecha":"2026-03-19","descripcion":"Payback Fasho Spotify Mar y Abr","ingresos":0,"egresos":-22,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-03-19","descripcion":"PedidosYa","ingresos":0,"egresos":10.3,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-03-20","descripcion":"Irvix - vasos","ingresos":0,"egresos":42.92,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-03-21","descripcion":"Diferido colchon 2","ingresos":0,"egresos":47.51,"categoria":"Fixed Expenses","tarjeta":"Produbanco CC"},{"fecha":"2026-03-21","descripcion":"PedidosYA chuchaqui kit","ingresos":0,"egresos":6.5,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-03-21","descripcion":"Octofries","ingresos":0,"egresos":6.5,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-03-23","descripcion":"Rifa Primo Isis","ingresos":0,"egresos":10,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-03-23","descripcion":"Tepanyaki","ingresos":0,"egresos":25,"categoria":"Comida","tarjeta":"Pichincha"},{"fecha":"2026-03-23","descripcion":"SDD Giu","ingresos":0,"egresos":12.5,"categoria":"Fiesta","tarjeta":"Produbanco"}]},"FEB 26":{"fixed":[{"descripcion":"Sueldo","ingresos":1250,"egresos":0},{"descripcion":"IESS","ingresos":0,"egresos":118.13},{"descripcion":"Sobresueldo","ingresos":104.17,"egresos":0},{"descripcion":"CCI","ingresos":0,"egresos":30}],"transactions":[{"fecha":"2025-02-02","descripcion":"Diferido colchon","ingresos":0,"egresos":18.38,"categoria":"Fiesta","tarjeta":"Produbanco CC"},{"fecha":"2026-02-02","descripcion":"DOD Planner","ingresos":0,"egresos":40.94,"categoria":"Tarifa","tarjeta":"Titanium"},{"fecha":"2026-02-02","descripcion":"Aguardiente Amarillo Isa Are","ingresos":0,"egresos":8.98,"categoria":"Comida","tarjeta":"Pichincha"},{"fecha":"2026-02-02","descripcion":"Lunch YOO Emi","ingresos":0,"egresos":9.55,"categoria":"Tarifa","tarjeta":"Pichincha"},{"fecha":"2026-02-03","descripcion":"Peaje","ingresos":0,"egresos":15.31,"categoria":"Fixed Expenses","tarjeta":"Pichincha CC"},{"fecha":"2026-02-04","descripcion":"Zona azul","ingresos":0,"egresos":0.8,"categoria":"Tarifa","tarjeta":"Pichincha"},{"fecha":"2026-02-05","descripcion":"Padel","ingresos":0,"egresos":136,"categoria":"Otros","tarjeta":"Produbanco"},{"fecha":"2026-02-06","descripcion":"Payback Carlos M lunch","ingresos":0,"egresos":-10.5,"categoria":"Delivery Comida","tarjeta":"Produbanco"},{"fecha":"2026-02-06","descripcion":"Payback Peter lunch","ingresos":0,"egresos":-10.5,"categoria":"Delivery Comida","tarjeta":"Produbanco"},{"fecha":"2026-02-06","descripcion":"Pedidosya 227","ingresos":0,"egresos":40.89,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-02-06","descripcion":"Pedidosya 227 propina","ingresos":0,"egresos":1.19,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-02-06","descripcion":"La Birreria","ingresos":0,"egresos":19,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-06","descripcion":"Payback Lucy lunch","ingresos":0,"egresos":-10.5,"categoria":"Delivery Comida","tarjeta":"Pichincha"},{"fecha":"2026-02-07","descripcion":"Diferido seguro auto","ingresos":0,"egresos":69.85,"categoria":"Auto","tarjeta":"Diners"},{"fecha":"2026-02-08","descripcion":"Pedidosya hamburguesa","ingresos":0,"egresos":13.42,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-02-08","descripcion":"Uber","ingresos":0,"egresos":12.88,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-08","descripcion":"Spotify","ingresos":0,"egresos":10.99,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-09","descripcion":"Poke CCI","ingresos":0,"egresos":14.3,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-11","descripcion":"Urbapark","ingresos":0,"egresos":1,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-12","descripcion":"Poke CCI","ingresos":0,"egresos":15.8,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-13","descripcion":"Interesting por Mora ????","ingresos":0,"egresos":0.03,"categoria":"Otros","tarjeta":"Produbanco CC"},{"fecha":"2026-02-13","descripcion":"Gatorade gasolinera","ingresos":0,"egresos":3.85,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-13","descripcion":"Uber","ingresos":0,"egresos":11.02,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-14","descripcion":"Tipti Pizzas","ingresos":0,"egresos":24.18,"categoria":"Comida","tarjeta":"Diners"},{"fecha":"2026-02-14","descripcion":"Multicines","ingresos":0,"egresos":38,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-15","descripcion":"Gasolina","ingresos":0,"egresos":25,"categoria":"Gasolina","tarjeta":"Titanium"},{"fecha":"2026-02-16","descripcion":"Apple","ingresos":0,"egresos":11.49,"categoria":"Fixed Expenses","tarjeta":"Pichincha CC"},{"fecha":"2026-02-18","descripcion":"Diferido cama","ingresos":0,"egresos":73.38,"categoria":"Fixed Expenses","tarjeta":"Diners"},{"fecha":"2026-02-18","descripcion":"Payback Spotify Fasho","ingresos":0,"egresos":-14,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-02-18","descripcion":"Bizcochos","ingresos":0,"egresos":4.5,"categoria":"Comida","tarjeta":"Pichincha"},{"fecha":"2026-02-18","descripcion":"Payback cine y pizzas Meme","ingresos":0,"egresos":-19.86,"categoria":"Comida","tarjeta":"Pichincha"},{"fecha":"2026-02-18","descripcion":"Regalo MJ - Isis (menos cine y pizza)","ingresos":0,"egresos":5.9,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-02-18","descripcion":"La Capricciosa","ingresos":0,"egresos":18.02,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-18","descripcion":"no se","ingresos":0,"egresos":6.75,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-19","descripcion":"De Prati","ingresos":0,"egresos":71.94,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-19","descripcion":"Megamaxi","ingresos":0,"egresos":34.3,"categoria":"Comida","tarjeta":"Titanium"},{"fecha":"2026-02-19","descripcion":"Starbucks","ingresos":0,"egresos":4.4,"categoria":"Salud","tarjeta":"Titanium"},{"fecha":"2026-02-19","descripcion":"Payback mama Medicity","ingresos":0,"egresos":19,"categoria":"Comida","tarjeta":"Pichincha"},{"fecha":"2026-02-21","descripcion":"Diferido colchon 2","ingresos":0,"egresos":47.51,"categoria":"Fixed Expenses","tarjeta":"Produbanco CC"},{"fecha":"2026-02-21","descripcion":"Rooftop El Brujo","ingresos":0,"egresos":8,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-02-21","descripcion":"Pedidos Ya","ingresos":0,"egresos":15.67,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-02-22","descripcion":"Uber","ingresos":0,"egresos":2.1,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-22","descripcion":"Ephimero","ingresos":0,"egresos":46,"categoria":"Fiesta","tarjeta":"Titanium"},{"fecha":"2026-02-23","descripcion":"Parqueadero Parque","ingresos":0,"egresos":7.5,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-02-23","descripcion":"Payback Ephimero Meme","ingresos":0,"egresos":-20,"categoria":"Fiesta","tarjeta":"Pichincha"},{"fecha":"2026-02-24","descripcion":"Regalo Meme","ingresos":0,"egresos":87,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-25","descripcion":"Payback cine Fasho","ingresos":0,"egresos":15,"categoria":"Otros","tarjeta":"Pichincha"},{"fecha":"2026-02-25","descripcion":"Medicity","ingresos":0,"egresos":68.21,"categoria":"Salud","tarjeta":"Titanium"},{"fecha":"2026-02-26","descripcion":"Uber","ingresos":0,"egresos":2,"categoria":"Otros","tarjeta":"Titanium"},{"fecha":"2026-02-26","descripcion":"Payback Luz regalo Meme","ingresos":0,"egresos":-44,"categoria":"Otros","tarjeta":"Produbanco"},{"fecha":"2026-02-27","descripcion":"ChatGPT Plus","ingresos":0,"egresos":19.99,"categoria":"Otros","tarjeta":"Pichincha CC"},{"fecha":"2026-02-27","descripcion":"Plan deuda protegida","ingresos":0,"egresos":2.98,"categoria":"Tarifa","tarjeta":"Pichincha CC"},{"fecha":"2026-02-27","descripcion":"Iva Servicios Digitales","ingresos":0,"egresos":3,"categoria":"Tarifa","tarjeta":"Pichincha CC"},{"fecha":"2026-02-28","descripcion":"Fybecca","ingresos":0,"egresos":4.7,"categoria":"Salud","tarjeta":"Titanium"},{"fecha":"2026-02-28","descripcion":"Pedidos Ya","ingresos":0,"egresos":25.13,"categoria":"Delivery Comida","tarjeta":"Titanium"},{"fecha":"2026-02-28","descripcion":"Coursera","ingresos":0,"egresos":35,"categoria":"Otros","tarjeta":"Produbanco CC"}]},"ENE 26":{"fixed":[],"transactions":[]}};
+
+// ── STATE ──
+function loadData(){
+  try{const s=localStorage.getItem(SK);if(s)return JSON.parse(s);}catch(e){}
+  return JSON.parse(JSON.stringify(INITIAL_DATA));
+}
+function saveData(){
+  localStorage.setItem(SK,JSON.stringify(data));
+}
+
+let data = {};
+let currentView = 'monthly';
+let currentMonth = '';
+let currentYearM = '';
+let currentYearY = '';
+let catChartInst = null, barChartInst = null;
+let editIdx = null, editFixedIdx = null;
+let editingYear = null, editingMonth = null;
+
+function init(){
+  data = loadData();
+  currentMonth = getSortedMonths()[getSortedMonths().length-1] || Object.keys(data)[0];
+  currentYearM = currentMonth.split(' ')[1] || '';
+  currentYearY = currentYearM;
+  document.getElementById('newFecha').value = new Date().toISOString().split('T')[0];
+  ['editModal','editFixedModal','yearModal','monthModal'].forEach(id=>{
+    document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal(id);});
+  });
+  render();
+}
+
+init();
+
+// ── HELPERS ──
+function fmt(n){return '$'+Math.abs(n).toFixed(2);}
+function monthSortKey(k){const p=k.split(' ');return(parseInt(p[1])||0)*100+MONTH_ORDER.indexOf(p[0]);}
+function getSortedMonths(){return Object.keys(data).sort((a,b)=>monthSortKey(a)-monthSortKey(b));}
+function getYears(){return[...new Set(getSortedMonths().map(m=>m.split(' ')[1]||''))].filter(Boolean).sort();}
+function getMonthsForYear(y){return getSortedMonths().filter(m=>m.split(' ')[1]===y);}
+
+// ── VIEW SWITCH ──
+function switchView(v){
+  currentView=v;
+  document.getElementById('viewMonthly').style.display=v==='monthly'?'':'none';
+  document.getElementById('viewYearly').style.display=v==='yearly'?'':'none';
+  document.getElementById('tabMonthly').classList.toggle('active',v==='monthly');
+  document.getElementById('tabYearly').classList.toggle('active',v==='yearly');
+  if(v==='yearly')renderYearly(); else render();
+}
+
+// ── MODAL ──
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+
+// ── YEAR MANAGEMENT ──
+function openYearModal(existingYear){
+  editingYear = existingYear || null;
+  document.getElementById('yearModalTitle').textContent = editingYear ? `Rename Year "20${editingYear}"` : 'Add Year';
+  document.getElementById('yearInput').value = editingYear || '';
+  openModal('yearModal');
+}
+
+function confirmYear(){
+  const val = document.getElementById('yearInput').value.trim();
+  if(!val){alert('Please enter a year.');return;}
+  if(editingYear){
+    if(val===editingYear){closeModal('yearModal');return;}
+    if(getYears().includes(val)){alert('That year already exists.');return;}
+    // rename all months in that year
+    getMonthsForYear(editingYear).forEach(m=>{
+      const newKey = m.replace(' '+editingYear,' '+val);
+      data[newKey]=data[m]; delete data[m];
+    });
+    if(currentYearM===editingYear)currentYearM=val;
+    if(currentYearY===editingYear)currentYearY=val;
+    if(currentMonth.split(' ')[1]===editingYear) currentMonth=currentMonth.replace(' '+editingYear,' '+val);
+  } else {
+    if(getYears().includes(val)){alert('This year already exists.');return;}
+    const firstMonth='ENE '+val;
+    data[firstMonth]={fixed:[],transactions:[]};
+    currentYearM=val; currentYearY=val; currentMonth=firstMonth;
+  }
+  saveData(); closeModal('yearModal');
+  if(currentView==='yearly') renderYearly(); else render();
+}
+
+// ── MONTH MANAGEMENT ──
+function openMonthModal(existingMonth){
+  editingMonth = existingMonth || null;
+  document.getElementById('monthModalTitle').textContent = editingMonth ? `Rename Month "${existingMonth}"` : 'Add Month';
+  document.getElementById('monthInput').value = existingMonth || '';
+  const copyWrap = document.getElementById('monthCopyWrap');
+  const sel = document.getElementById('copyFixedFrom');
+  if(editingMonth){
+    copyWrap.style.display='none';
+  } else {
+    copyWrap.style.display='';
+    sel.innerHTML='<option value="">Don\'t copy (start empty)</option>'+getSortedMonths().map(m=>`<option value="${m}">${m}</option>`).join('');
+  }
+  openModal('monthModal');
+}
+
+function confirmMonth(){
+  const raw = document.getElementById('monthInput').value.trim().toUpperCase();
+  if(!raw){alert('Please enter a month name.');return;}
+  if(editingMonth){
+    if(raw===editingMonth){closeModal('monthModal');return;}
+    if(data[raw]){alert('That month already exists.');return;}
+    data[raw]=data[editingMonth]; delete data[editingMonth];
+    if(currentMonth===editingMonth)currentMonth=raw;
+    currentYearM = raw.split(' ')[1] || currentYearM;
+  } else {
+    if(data[raw]){alert('This month already exists.');return;}
+    const copyFrom=document.getElementById('copyFixedFrom').value;
+    data[raw]={fixed:copyFrom?JSON.parse(JSON.stringify(data[copyFrom].fixed)):[],transactions:[]};
+    currentMonth=raw;
+    currentYearM=raw.split(' ')[1]||currentYearM;
+  }
+  saveData(); closeModal('monthModal'); render();
+}
+
+function deleteMonth(m){
+  if(getSortedMonths().length<=1){alert('Cannot delete the only remaining month.');return;}
+  if(!confirm(`Delete "${m}" and all its data?`))return;
+  delete data[m];
+  if(currentMonth===m){const r=getSortedMonths();currentMonth=r[r.length-1];}
+  currentYearM=currentMonth.split(' ')[1]||currentYearM;
+  saveData(); render();
+}
+
+// ── TABS ──
+function renderYearTabs(containerId, activeYear, onClickFn){
+  const el=document.getElementById(containerId);
+  el.innerHTML='';
+  getYears().forEach(y=>{
+    const grp=document.createElement('span');
+    grp.className='year-tab-group';
+    const b=document.createElement('button');
+    b.className='year-tab'+(y===activeYear?' active':'');
+    b.textContent='20'+y;
+    b.onclick=()=>onClickFn(y);
+    const eb=document.createElement('button');
+    eb.className='year-edit-btn';
+    eb.title='Rename year';
+    eb.innerHTML=PENCIL_SVG;
+    eb.onclick=e=>{e.stopPropagation();openYearModal(y);};
+    grp.appendChild(b); grp.appendChild(eb);
+    el.appendChild(grp);
+  });
+  const addB=document.createElement('button');
+  addB.className='year-add-btn';
+  addB.textContent='+ Year';
+  addB.onclick=()=>openYearModal(null);
+  el.appendChild(addB);
+}
+
+function renderTabs(){
+  renderYearTabs('yearTabs', currentYearM, y=>{
+    currentYearM=y;
+    const ms=getMonthsForYear(y);
+    if(ms.length) currentMonth=ms[ms.length-1];
+    render();
+  });
+  const tabs=document.getElementById('monthTabs');
+  tabs.innerHTML='';
+  getMonthsForYear(currentYearM).forEach(m=>{
+    const wrap=document.createElement('div'); wrap.className='month-tab-wrap';
+    const btn=document.createElement('button');
+    btn.className='month-tab'+(m===currentMonth?' active':'');
+    btn.textContent=m; btn.onclick=()=>{currentMonth=m;render();};
+    const editB=document.createElement('button');
+    editB.className='month-edit-btn'; editB.title='Rename month'; editB.innerHTML=PENCIL_SVG;
+    editB.onclick=e=>{e.stopPropagation();openMonthModal(m);};
+    const delB=document.createElement('button');
+    delB.className='delete-month-btn'; delB.title='Delete month'; delB.textContent='✕';
+    delB.onclick=e=>{e.stopPropagation();deleteMonth(m);};
+    wrap.appendChild(btn); wrap.appendChild(editB); wrap.appendChild(delB);
+    tabs.appendChild(wrap);
+  });
+  const addBtn=document.createElement('button');
+  addBtn.className='month-tab add-month'; addBtn.textContent='+ Month';
+  addBtn.onclick=()=>openMonthModal(null);
+  tabs.appendChild(addBtn);
+}
+
+// ── TOTALS ──
+function getTotals(month){
+  const md=data[month]; let fI=0,fE=0,vI=0,vE=0;
+  (md.fixed||[]).forEach(f=>{fI+=f.ingresos;fE+=f.egresos;});
+  (md.transactions||[]).forEach(t=>{vI+=t.ingresos;vE+=t.egresos;});
+  return{fixedIng:fI,fixedEgr:fE,varIng:vI,varEgr:vE,totalIng:fI+vI,totalEgr:fE+vE,balance:(fI+vI)-(fE+vE)};
+}
+
+// ── SUMMARY CARDS ──
+function renderSummary(){
+  const t=getTotals(currentMonth);
+  document.getElementById('summaryCards').innerHTML=`
+    <div class="card income"><label>Total Income</label><div class="amount">${fmt(t.totalIng)}</div></div>
+    <div class="card"><label>Total Expenses</label><div class="amount" style="color:var(--pink-hot)">${fmt(t.totalEgr)}</div></div>
+    <div class="card balance"><label>Balance</label><div class="amount" style="color:${t.balance>=0?'#c48800':'var(--pink-hot)'}">${t.balance>=0?'':'−'}${fmt(t.balance)}</div></div>
+    <div class="card fixed"><label>Fixed Expenses</label><div class="amount" style="color:var(--pink-rose)">${fmt(t.fixedEgr)}</div></div>`;
+}
+
+// ── CHARTS ──
+function getCatTotals(){
+  const cats={};
+  (data[currentMonth].transactions||[]).forEach(t=>{if(t.egresos>0){const c=t.categoria||'Sin categoría';cats[c]=(cats[c]||0)+t.egresos;}});
+  return cats;
+}
+function renderCharts(){
+  const cats=getCatTotals(); const labels=Object.keys(cats),values=labels.map(l=>cats[l]);
+  if(catChartInst)catChartInst.destroy();
+  catChartInst=new Chart(document.getElementById('catChart').getContext('2d'),{
+    type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:COLORS,borderWidth:2,borderColor:'#fffef2'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},color:'#2a0018',boxWidth:12,padding:8}}}}
+  });
+  const months=getMonthsForYear(currentYearM);
+  if(barChartInst)barChartInst.destroy();
+  barChartInst=new Chart(document.getElementById('barChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:months,datasets:[
+      {label:'Income',data:months.map(m=>getTotals(m).totalIng),backgroundColor:'#ffd84d',borderRadius:6},
+      {label:'Expenses',data:months.map(m=>getTotals(m).totalEgr),backgroundColor:'#ff007f',borderRadius:6}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#2a0018',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#2a0018',font:{size:9}}},y:{ticks:{color:'#2a0018',font:{size:9},callback:v=>'$'+v}}}}
+  });
+}
+
+// ── FIXED EXPENSES ──
+function renderFixed(){
+  const md=data[currentMonth]; const tbody=document.getElementById('fixedBody');
+  if(!md.fixed||md.fixed.length===0){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No fixed expenses</td></tr>';return;}
+  let tI=0,tE=0;
+  tbody.innerHTML=md.fixed.map((f,i)=>{tI+=f.ingresos;tE+=f.egresos;return`
+    <tr>
+      <td>${f.descripcion}</td>
+      <td class="ingreso">${f.ingresos>0?fmt(f.ingresos):'—'}</td>
+      <td class="egreso">${f.egresos>0?fmt(f.egresos):'—'}</td>
+      <td><button class="edit-btn" onclick="openEditFixed(${i})" title="Edit">${PENCIL_SVG}</button></td>
+      <td><button class="delete-btn" onclick="deleteFixed(${i})">✕</button></td>
+    </tr>`;}).join('')+`
+  <tr class="total-row"><td>TOTAL</td><td class="ingreso">${tI>0?fmt(tI):'—'}</td><td class="egreso">${tE>0?fmt(tE):'—'}</td><td colspan="2"></td></tr>`;
+}
+function addFixed(){
+  const desc=document.getElementById('fixedDesc').value.trim();
+  const ing=parseFloat(document.getElementById('fixedIng').value)||0;
+  const egr=parseFloat(document.getElementById('fixedEgr').value)||0;
+  if(!desc)return;
+  data[currentMonth].fixed.push({descripcion:desc,ingresos:ing,egresos:egr});
+  saveData();
+  document.getElementById('fixedDesc').value='';document.getElementById('fixedIng').value='';document.getElementById('fixedEgr').value='';
+  render();
+}
+function deleteFixed(i){data[currentMonth].fixed.splice(i,1);saveData();render();}
+function openEditFixed(i){
+  editFixedIdx=i; const f=data[currentMonth].fixed[i];
+  document.getElementById('efDesc').value=f.descripcion;
+  document.getElementById('efIng').value=f.ingresos||'';
+  document.getElementById('efEgr').value=f.egresos||'';
+  openModal('editFixedModal');
+}
+function confirmEditFixed(){
+  if(editFixedIdx===null)return;
+  data[currentMonth].fixed[editFixedIdx]={
+    descripcion:document.getElementById('efDesc').value.trim(),
+    ingresos:parseFloat(document.getElementById('efIng').value)||0,
+    egresos:parseFloat(document.getElementById('efEgr').value)||0
+  };
+  saveData();closeModal('editFixedModal');editFixedIdx=null;render();
+}
+
+// ── VARIABLE TRANSACTIONS ──
+function getFilteredTx(){
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  const catF=document.getElementById('catFilter').value;
+  const tarjF=document.getElementById('tarjetaFilter').value;
+  return(data[currentMonth].transactions||[]).filter(t=>{
+    if(search&&!t.descripcion.toLowerCase().includes(search))return false;
+    if(catF&&t.categoria!==catF)return false;
+    if(tarjF&&t.tarjeta!==tarjF)return false;
+    return true;
+  });
+}
+function updateFilters(){
+  const txs=data[currentMonth].transactions||[];
+  const cats=[...new Set(txs.map(t=>t.categoria).filter(Boolean))].sort();
+  const tarjetas=[...new Set(txs.map(t=>t.tarjeta).filter(Boolean))].sort();
+  const catSel=document.getElementById('catFilter'),catVal=catSel.value;
+  catSel.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(cats.includes(catVal))catSel.value=catVal;
+  const tarjSel=document.getElementById('tarjetaFilter'),tarjVal=tarjSel.value;
+  tarjSel.innerHTML='<option value="">All cards</option>'+tarjetas.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(tarjetas.includes(tarjVal))tarjSel.value=tarjVal;
+  document.getElementById('catSuggestions').innerHTML=cats.map(c=>`<option value="${c}">`).join('');
+  document.getElementById('tarjetaSuggestions').innerHTML=tarjetas.map(t=>`<option value="${t}">`).join('');
+}
+function renderTable(){
+  const txs=getFilteredTx(); const allTx=data[currentMonth].transactions;
+  const catF=document.getElementById('catFilter').value;
+  const tarjF=document.getElementById('tarjetaFilter').value;
+  const isFiltered=catF||tarjF||document.getElementById('searchInput').value;
+  const tbody=document.getElementById('txBody');
+  if(txs.length===0){tbody.innerHTML='<tr><td colspan="8" class="empty-state">No transactions</td></tr>';document.getElementById('filterSum').textContent='';return;}
+  let tI=0,tE=0;
+  tbody.innerHTML=txs.map(t=>{
+    tI+=t.ingresos;tE+=t.egresos;
+    const i=allTx.indexOf(t);
+    return`<tr>
+      <td>${t.fecha}</td><td>${t.descripcion}</td>
+      <td class="ingreso">${t.ingresos>0?fmt(t.ingresos):'—'}</td>
+      <td class="${t.egresos<0?'egreso negative':'egreso'}">${t.egresos!==0?fmt(t.egresos):'—'}</td>
+      <td><span class="cat-badge">${t.categoria||'—'}</span></td>
+      <td><span class="pill">${t.tarjeta||'—'}</span></td>
+      <td><button class="edit-btn" onclick="openEdit(${i})" title="Edit">${PENCIL_SVG}</button></td>
+      <td><button class="delete-btn" onclick="deleteTx(${i})">✕</button></td>
+    </tr>`;}).join('')+`
+  <tr class="total-row">
+    <td colspan="2">TOTAL${isFiltered?' (filtered)':''}</td>
+    <td class="ingreso">${tI>0?fmt(tI):'—'}</td>
+    <td class="egreso">${tE!==0?fmt(tE):'—'}</td>
+    <td colspan="4"></td>
+  </tr>`;
+  const sumEl=document.getElementById('filterSum');
+  if(isFiltered){const net=tI-tE;sumEl.textContent=`Filtered: Income ${fmt(tI)} · Expenses ${fmt(tE)} · Net ${net>=0?'':'-'}${fmt(net)}`;}
+  else sumEl.textContent='';
+}
+function addTransaction(){
+  const fecha=document.getElementById('newFecha').value;
+  const desc=document.getElementById('newDesc').value.trim();
+  const ing=parseFloat(document.getElementById('newIng').value)||0;
+  const egr=parseFloat(document.getElementById('newEgr').value)||0;
+  const cat=document.getElementById('newCat').value.trim();
+  const tarjeta=document.getElementById('newTarjeta').value.trim();
+  if(!desc)return;
+  if(!data[currentMonth].transactions)data[currentMonth].transactions=[];
+  data[currentMonth].transactions.push({fecha,descripcion:desc,ingresos:ing,egresos:egr,categoria:cat,tarjeta});
+  data[currentMonth].transactions.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  saveData();
+  ['newDesc','newIng','newEgr','newCat','newTarjeta'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('newFecha').value=new Date().toISOString().split('T')[0];
+  render();
+}
+function deleteTx(i){data[currentMonth].transactions.splice(i,1);saveData();render();}
+function openEdit(i){
+  editIdx=i; const t=data[currentMonth].transactions[i];
+  document.getElementById('editFecha').value=t.fecha;
+  document.getElementById('editDesc').value=t.descripcion;
+  document.getElementById('editIng').value=t.ingresos||'';
+  document.getElementById('editEgr').value=t.egresos||'';
+  document.getElementById('editCat').value=t.categoria||'';
+  document.getElementById('editTarjeta').value=t.tarjeta||'';
+  openModal('editModal');
+}
+function confirmEdit(){
+  if(editIdx===null)return;
+  data[currentMonth].transactions[editIdx]={
+    fecha:document.getElementById('editFecha').value,
+    descripcion:document.getElementById('editDesc').value.trim(),
+    ingresos:parseFloat(document.getElementById('editIng').value)||0,
+    egresos:parseFloat(document.getElementById('editEgr').value)||0,
+    categoria:document.getElementById('editCat').value.trim(),
+    tarjeta:document.getElementById('editTarjeta').value.trim()
+  };
+  data[currentMonth].transactions.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  saveData();closeModal('editModal');editIdx=null;render();
+}
+
+// ── YEARLY SUMMARY ──
+function renderYearly(){
+  const years=getYears();
+  if(!years.includes(currentYearY))currentYearY=years[years.length-1]||'';
+  renderYearTabs('yearTabsY', currentYearY, y=>{currentYearY=y;renderYearlyContent();});
+  renderYearlyContent();
+}
+function renderYearlyContent(){
+  const months=getMonthsForYear(currentYearY);
+  const cont=document.getElementById('yearlyContent');
+  if(!months.length){cont.innerHTML='<div class="empty-state">No data for this year.</div>';return;}
+  let html=`<div class="year-section-title">Year 20${currentYearY} — Monthly Overview</div>`;
+  html+=`<div class="yearly-table-wrap"><table class="yearly-table"><thead><tr>
+    <th>Month</th><th>Income</th><th>Expenses</th><th>Fixed Exp.</th><th>Var. Exp.</th><th>Balance</th>
+  </tr></thead><tbody>`;
+  let yI=0,yE=0,yFE=0,yVE=0;
+  months.forEach(m=>{
+    const t=getTotals(m); yI+=t.totalIng;yE+=t.totalEgr;yFE+=t.fixedEgr;yVE+=t.varEgr;
+    const bal=t.balance;
+    html+=`<tr><td>${m}</td><td class="yearly-ing">${fmt(t.totalIng)}</td><td class="yearly-egr">${fmt(t.totalEgr)}</td>
+      <td style="color:var(--pink-rose);font-weight:700">${fmt(t.fixedEgr)}</td>
+      <td style="color:var(--pink-light);font-weight:700">${fmt(t.varEgr)}</td>
+      <td class="${bal>=0?'yearly-bal-pos':'yearly-bal-neg'}">${bal>=0?'':'-'}${fmt(bal)}</td></tr>`;
+  });
+  const yBal=yI-yE;
+  html+=`</tbody><tfoot><tr class="ytotal"><td>TOTAL</td>
+    <td class="yearly-ing">${fmt(yI)}</td><td class="yearly-egr">${fmt(yE)}</td>
+    <td style="color:var(--pink-rose);font-weight:800">${fmt(yFE)}</td>
+    <td style="color:var(--pink-light);font-weight:800">${fmt(yVE)}</td>
+    <td class="${yBal>=0?'yearly-bal-pos':'yearly-bal-neg'}">${yBal>=0?'':'-'}${fmt(yBal)}</td>
+  </tr></tfoot></table></div>`;
+  const catMap={};
+  months.forEach(m=>{
+    (data[m].transactions||[]).forEach(t=>{if(t.egresos>0){const c=t.categoria||'Sin categoría';catMap[c]=(catMap[c]||0)+t.egresos;}});
+  });
+  const catEntries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  if(catEntries.length){
+    html+=`<div class="year-section-title">Expenses by Category — 20${currentYearY}</div>`;
+    html+=`<div class="yearly-table-wrap"><table class="yearly-table"><thead><tr><th>Category</th><th>Total</th><th>% of Expenses</th></tr></thead><tbody>`;
+    catEntries.forEach(([cat,amt])=>{
+      const pct=yE>0?((amt/yE)*100).toFixed(1):'0.0';
+      html+=`<tr><td>${cat}</td><td class="yearly-egr">${fmt(amt)}</td><td style="color:#888">${pct}%</td></tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
+  cont.innerHTML=html;
+}
+
+// ── MAIN RENDER ──
+function render(){
+  const y=currentMonth.split(' ')[1]||'';
+  if(y)currentYearM=y;
+  renderTabs();renderSummary();renderFixed();updateFilters();renderTable();renderCharts();
+}
+
+// ── INIT ──
+// (startup handled by init() above)
+</script>
+</body>
+</html>
